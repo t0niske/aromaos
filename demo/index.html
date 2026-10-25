@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru" class="h-full antialiased">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#f8f7fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#25293c" media="(prefers-color-scheme: dark)">
+  <title>AromaOS — демо</title>
+  <meta name="description" content="Демо-версия AromaOS: система управления аромамаркетингом работает целиком в браузере">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237367f0'/%3E%3Cpath d='M16 26a6 6 0 0 0 6-6c0-3.5-6-10-6-10s-6 6.5-6 10a6 6 0 0 0 6 6z' fill='none' stroke='white' stroke-width='2.2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap&subset=cyrillic" rel="stylesheet">
+  <style>
+    :root { --font-inter: 'Inter'; }
+    #splash { position: fixed; inset: 0; display: grid; place-items: center; background: #f8f7fa; color: #6d6b77; font: 15px/1.5 Inter, system-ui, sans-serif; text-align: center; padding: 24px; }
+    #splash b { display: block; margin: 14px 0 4px; color: #444050; font-size: 20px; font-weight: 600; }
+    #splash i { display: block; width: 44px; height: 44px; margin: 0 auto; border-radius: 10px; background: #7367f0; animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 50% { transform: scale(.88); opacity: .7; } }
+    @media (prefers-color-scheme: dark) { #splash { background: #25293c; color: #b0acc7; } #splash b { color: #e1def5; } }
+  </style>
+</head>
+<body class="min-h-full">
+  <div id="splash"><div><i></i><b>AromaOS</b><span id="splash-status">Загружаем демо-версию…</span></div></div>
+  <div id="root"></div>
+  <script type="module" src="./main.tsx"></script>
+</body>
+</html>

@@ -8,7 +8,7 @@ import { connection } from 'next/server';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { getDb, t } from '@/db';
-import { can, type Role, type Section } from './access';
+import { can, homeFor, type Role, type Section } from './access';
 
 const COOKIE = 'aos_session';
 const TTL_DAYS = 14;
@@ -60,11 +60,11 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return u && u.active ? { id: u.id, name: u.name, email: u.email, role: u.role } : null;
 });
 
-/* Для страниц и действий: нет входа → /login, нет прав на раздел → на главную */
+/* Для страниц и действий: нет входа → /login, нет прав на раздел → на стартовую страницу роли */
 export async function requireUser(section?: Section): Promise<CurrentUser> {
   const u = await getCurrentUser();
   if (!u) redirect('/login');
-  if (section && !can(u.role, section)) redirect('/');
+  if (section && !can(u.role, section)) redirect(homeFor(u.role));
   return u;
 }
 

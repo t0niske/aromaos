@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // браузерная демо-версия: сборка и снимок базы
+    "dist-demo/**",
+    "demo/snapshot/**",
   ]),
 ]);
 

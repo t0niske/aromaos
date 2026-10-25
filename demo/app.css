@@ -1,0 +1,12 @@
+@import "../src/app/globals.css";
+@source "../src";
+@source "./";
+
+/* только для браузерной версии */
+.demo-progress { position: fixed; inset: 0 0 auto; z-index: 60; height: 3px; transform: scaleX(0); transform-origin: left; background: var(--accent); opacity: 0; transition: opacity .2s; pointer-events: none; }
+.demo-progress.on { opacity: 1; animation: demo-progress 1.6s ease-out forwards; }
+@keyframes demo-progress { from { transform: scaleX(0); } to { transform: scaleX(.85); } }
+.demo-bar { position: fixed; right: 16px; bottom: 16px; z-index: 45; display: flex; flex-direction: column; align-items: flex-end; }
+.demo-pill { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 999px; background: var(--nav-bg); color: #fff;
+  font-size: 13px; font-weight: 500; box-shadow: var(--shadow); }
+.demo-pill:hover { background: var(--accent); }
