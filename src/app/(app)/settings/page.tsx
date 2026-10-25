@@ -4,11 +4,12 @@ import { asc, desc, eq } from 'drizzle-orm';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
 import { ROLE_NAMES, type Role } from '@/lib/access';
-import { SITE_NAMES, day, kzt } from '@/lib/format';
+import { day, kzt } from '@/lib/format';
 import { ActionForm } from '@/components/action-form';
+import { Icon } from '@/components/icons';
 import { Badge, Card, Field, PageHeader, Skeleton } from '@/components/ui';
 import { createUser, toggleUser, updateTariff } from '../actions';
-import { KeyRotate, RenewalsButton } from './client';
+import { RenewalsButton } from './client';
 
 export const metadata: Metadata = { title: 'Настройки' };
 
@@ -18,24 +19,23 @@ export default function SettingsPage() {
 
 const ACTION_NAMES: Record<string, string> = {
   login: 'вход', create: 'создание', update: 'изменение', stage: 'смена этапа', win: 'выигрыш', status: 'статус', renew: 'продление',
-  complete: 'визит выполнен', scent: 'смена аромата', rotate: 'новый ключ API', sweep: 'проверка продлений', activate: 'включение', deactivate: 'отключение',
+  complete: 'визит выполнен', scent: 'смена аромата', sweep: 'проверка продлений', activate: 'включение', deactivate: 'отключение',
 };
-const ENTITY_NAMES: Record<string, string> = { lead: 'лид', company: 'клиент', object: 'объект', subscription: 'подписка', visit: 'визит', task: 'задача', user: 'пользователь', tariff: 'тариф', api_key: 'ключ', zone: 'зона' };
+const ENTITY_NAMES: Record<string, string> = { lead: 'лид', company: 'клиент', object: 'объект', subscription: 'подписка', visit: 'визит', task: 'задача', user: 'пользователь', tariff: 'тариф', zone: 'зона' };
 
 async function Settings() {
   const me = await requireUser('settings');
   const db = await getDb();
-  const [users, tariffs, keys, log] = await Promise.all([
+  const [users, tariffs, log] = await Promise.all([
     db.select().from(t.users).orderBy(asc(t.users.id)),
     db.select({ x: t.tariffs, model: t.deviceModels.name }).from(t.tariffs).innerJoin(t.deviceModels, eq(t.deviceModels.id, t.tariffs.modelId)).orderBy(asc(t.tariffs.modelId), asc(t.tariffs.periodMonths)),
-    db.select().from(t.apiKeys).orderBy(asc(t.apiKeys.id)),
     db.select({ a: t.auditLog, who: t.users.name }).from(t.auditLog).leftJoin(t.users, eq(t.users.id, t.auditLog.userId)).orderBy(desc(t.auditLog.id)).limit(25),
   ]);
 
   return (
     <>
-      <PageHeader title="Настройки" sub="Команда, тарифы, приём заявок с сайтов, журнал действий" />
-      <div className="grid gap-4 xl:grid-cols-2">
+      <PageHeader title="Настройки" sub="Команда, тарифы, автоматизации, журнал действий" />
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card title="Команда" pad={false}>
           <div className="tbl-wrap" data-scroll-x><table className="tbl">
             <thead><tr><th>Сотрудник</th><th>Роль</th><th /></tr></thead>
@@ -60,32 +60,22 @@ async function Settings() {
 
         <Card title="Тарифы (из прайса Nova 300 / Nova 1000)" pad={false}>
           <div className="tbl-wrap" data-scroll-x><table className="tbl">
-            <thead><tr><th>Тариф</th><th>За период</th><th>В месяц</th><th>Визитов/мес</th><th /></tr></thead>
+            <thead><tr><th>Тариф</th><th>Цена за период · в месяц · визитов</th></tr></thead>
             <tbody>{tariffs.map(({ x }) => (
               <tr key={x.id}>
-                <td className="font-medium">{x.name}</td>
-                <td colSpan={4}>
-                  <form action={updateTariff.bind(null, x.id)} className="flex flex-wrap items-center gap-2">
-                    <input className="input num h-8 w-32" name="priceTotal" type="number" defaultValue={x.priceTotal} aria-label="Цена за период" />
-                    <span className="num w-28 text-ink-3">{kzt(Math.round(x.priceTotal / x.periodMonths))}</span>
-                    <input className="input num h-8 w-16" name="visitsPerMonth" type="number" min={1} max={8} defaultValue={x.visitsPerMonth} aria-label="Визитов в месяц" />
-                    <button className="btn btn-sm">Сохранить</button>
+                <td className="font-medium whitespace-nowrap text-ink">{x.name}</td>
+                <td>
+                  <form action={updateTariff.bind(null, x.id)} className="flex items-center gap-2">
+                    <input className="input num h-8 w-28 shrink-0" name="priceTotal" type="number" defaultValue={x.priceTotal} aria-label="Цена за период" />
+                    <span className="num w-[88px] shrink-0 text-[13px] text-ink-3">{kzt(Math.round(x.priceTotal / x.periodMonths))}</span>
+                    <input className="input num h-8 w-14 shrink-0" name="visitsPerMonth" type="number" min={1} max={8} defaultValue={x.visitsPerMonth} aria-label="Визитов в месяц" />
+                    <button className="btn btn-soft btn-sm size-8 shrink-0 p-0" aria-label={`Сохранить: ${x.name}`} title="Сохранить"><Icon name="check" size={16} /></button>
                   </form>
                 </td>
               </tr>
             ))}</tbody>
           </table></div>
-          <p className="px-[18px] py-3 text-[12.5px] text-ink-3">Новая цена действует для новых подписок; действующие не меняются.</p>
-        </Card>
-
-        <Card title="Приём заявок с сайтов">
-          <p className="mb-3 text-ink-2">Сайты пока <b>не подключены</b>. Когда будут готовы, форма каждого сайта отправит заявку на <code className="rounded bg-surface-2 px-1.5 py-0.5 text-[12.5px]">POST /api/public/leads</code> со своим ключом — заявка попадёт в воронку с UTM, ответственным и задачей «связаться за 15 минут».</p>
-          <ul className="grid gap-2">{keys.map(k => (
-            <li key={k.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-surface-2 px-3 py-2">
-              <span><span className={`badge site-${k.site}`}>{SITE_NAMES[k.site] ?? k.label}</span> <span className="ml-2 text-[12.5px] text-ink-3">{k.lastUsedAt ? `последняя заявка ${day(k.lastUsedAt)}` : 'заявок ещё не было'}</span></span>
-              <KeyRotate id={k.id} />
-            </li>
-          ))}</ul>
+          <p className="px-6 py-4 text-[12.5px] text-ink-3">Новая цена действует для новых подписок; действующие не меняются.</p>
         </Card>
 
         <Card title="Автоматизации">
@@ -114,7 +104,7 @@ async function Settings() {
           </table></div>
         </Card>
       </div>
-      <p className="mt-4 text-[12.5px] text-ink-3"><Badge>v0.1</Badge> MVP-ядро AromaOS. Дальше по спецификации: счета и Kaspi, склад масел, кабинет клиента, приложение техника офлайн.</p>
+      <p className="mt-4 text-[12.5px] text-ink-3"><Badge>v0.1</Badge> MVP-ядро AromaOS. Дальше по спецификации: приём заявок с сайтов, счета и Kaspi, склад масел, кабинет клиента, приложение техника офлайн.</p>
     </>
   );
 }

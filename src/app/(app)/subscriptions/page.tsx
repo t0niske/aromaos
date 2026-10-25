@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
 import { daysBetween, today } from '@/lib/dates';
@@ -31,20 +31,23 @@ async function Subs({ searchParams }: { searchParams: PageProps<'/subscriptions'
     db.select({ status: t.subscriptions.status, n: sql<number>`count(*)`.mapWith(Number) }).from(t.subscriptions).groupBy(t.subscriptions.status),
     db.select({ model: t.deviceModels.name, mrr: sql<number>`sum(${t.subscriptions.priceMonth})`.mapWith(Number), n: sql<number>`count(*)`.mapWith(Number) })
       .from(t.subscriptions).innerJoin(t.tariffs, eq(t.tariffs.id, t.subscriptions.tariffId)).innerJoin(t.deviceModels, eq(t.deviceModels.id, t.tariffs.modelId))
-      .where(inArray(t.subscriptions.status, ['active', 'renewing'])).groupBy(t.deviceModels.name),
+      .where(and(inArray(t.subscriptions.status, ['active', 'renewing']), lte(t.subscriptions.startDate, t0))).groupBy(t.deviceModels.name),
     db.select({ reason: t.subscriptions.cancelReason, n: sql<number>`count(*)`.mapWith(Number) }).from(t.subscriptions).where(eq(t.subscriptions.status, 'cancelled')).groupBy(t.subscriptions.cancelReason),
   ]);
   const n = (st: readonly string[]) => counts.filter(c => st.includes(c.status)).reduce((a, c) => a + c.n, 0);
   const mrr = byModel.reduce((a, m) => a + m.mrr, 0);
-  const avg = n(TABS.live) ? Math.round(mrr / n(TABS.live)) : 0;
+  const liveN = byModel.reduce((a, m) => a + m.n, 0);
+  const avg = liveN ? Math.round(mrr / liveN) : 0;
+  // продлённая = на объекте есть следующая подписка с даты её окончания
+  const renewedIds = new Set(rows.filter(r => rows.some(x => x.s.objectId === r.s.objectId && x.s.startDate === r.s.endDate)).map(r => r.s.id));
 
   return (
     <>
       <PageHeader title="Подписки" sub="Тариф, срок, продления и паузы по каждому объекту" />
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="MRR" value={kzt(mrr)} hint={`средний чек ${kzt(avg)}`} />
-        {byModel.map(m => <Stat key={m.model} label={m.model} value={kzt(m.mrr)} hint={`${m.n} подписок`} />)}
-        <Stat label="Расторгнуто" value={n(TABS.cancelled)} hint={reasons.length ? reasons.map(r => `${r.reason}: ${r.n}`).join(' · ') : 'пока ни одной'} tone={n(TABS.cancelled) ? 'warn' : 'up'} />
+      <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="MRR" icon="coin" color="green" value={kzt(mrr)} hint={`средний чек ${kzt(avg)}`} />
+        {byModel.map(m => <Stat key={m.model} label={m.model} icon="box" color={m.model.includes('1000') ? 'blue' : 'violet'} value={kzt(m.mrr)} hint={`${m.n} подписок`} />)}
+        <Stat label="Расторгнуто" icon="close" color="red" value={n(TABS.cancelled)} hint={reasons.length ? reasons.map(r => `${r.reason}: ${r.n}`).join(' · ') : 'пока ни одной'} tone={n(TABS.cancelled) ? 'warn' : 'up'} />
       </div>
 
       <Tabs active={`/subscriptions?tab=${tab}`} items={[
@@ -62,12 +65,12 @@ async function Subs({ searchParams }: { searchParams: PageProps<'/subscriptions'
               const left = daysBetween(t0, s.endDate);
               return (
                 <tr key={s.id}>
-                  <td><Link className="row-link" href={`/objects/${obj.id}`}>{obj.name}</Link><div className="text-[12.5px] text-ink-3">{company}</div></td>
+                  <td><Link className="row-link" href={`/objects/${obj.id}`}>{obj.name}</Link>{company !== obj.name && <div className="text-[12.5px] text-ink-3">{company}</div>}</td>
                   <td>{tariff}{s.discountPct ? <div className="text-[12.5px] text-ink-3">скидка {s.discountPct}%</div> : null}</td>
                   <td className="num font-medium">{kzt(s.priceMonth)}</td>
                   <td className="num text-ink-2">{dayYear(s.startDate)} — {dayYear(s.endDate)}</td>
-                  <td className="num">{s.status === 'cancelled' ? <span className="text-ink-3">{s.cancelReason}</span> : left < 0 ? <Badge tone="red">истекла</Badge> : left <= 30 ? <Badge tone="amber">{left} дн.</Badge> : `${left} дн.`}</td>
-                  <td><Badge tone={SUB_STATUS[s.status][1]}>{SUB_STATUS[s.status][0]}</Badge></td>
+                  <td className="num">{renewedIds.has(s.id) ? <Badge tone="green">продлена</Badge> : s.status === 'cancelled' ? <span className="text-ink-3">{s.cancelReason}</span> : left < 0 ? <Badge tone="red">истекла</Badge> : left <= 30 ? <Badge tone="amber">{left} дн.</Badge> : `${left} дн.`}</td>
+                  <td>{s.startDate > t0 ? <Badge tone="violet">с {dayYear(s.startDate)}</Badge> : <Badge tone={SUB_STATUS[s.status][1]}>{SUB_STATUS[s.status][0]}</Badge>}</td>
                 </tr>
               );
             })}</tbody>

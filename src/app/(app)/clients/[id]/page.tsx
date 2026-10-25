@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import { today } from '@/lib/dates';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
 import { can } from '@/lib/access';
@@ -30,7 +31,7 @@ async function Client({ params, searchParams }: Pick<PageProps<'/clients/[id]'>,
     objIds.length ? db.select({ v: t.visits, obj: t.objects.name }).from(t.visits).innerJoin(t.objects, eq(t.objects.id, t.visits.objectId)).where(and(inArray(t.visits.objectId, objIds), ne(t.visits.status, 'cancelled'))).orderBy(desc(t.visits.plannedDate)).limit(8) : [],
     db.select().from(t.tasks).where(and(eq(t.tasks.companyId, id), ne(t.tasks.status, 'done'))).orderBy(asc(t.tasks.dueDate)),
   ]);
-  const live = subs.filter(x => x.s.status === 'active' || x.s.status === 'renewing');
+  const live = subs.filter(x => (x.s.status === 'active' || x.s.status === 'renewing') && x.s.startDate <= today());
   const mrr = live.reduce((a, x) => a + x.s.priceMonth, 0);
   const done = visits.filter(x => x.v.rating);
   const rating = done.length ? (done.reduce((a, x) => a + (x.v.rating ?? 0), 0) / done.length).toFixed(1) : '—';
@@ -42,11 +43,11 @@ async function Client({ params, searchParams }: Pick<PageProps<'/clients/[id]'>,
       <PageHeader back={{ href: '/clients', label: 'Клиенты' }} title={c.name} sub={[c.legalForm, c.industry, c.bin && `БИН ${c.bin}`].filter(Boolean).join(' · ')} />
       {sp.won && <p className="badge badge-green mb-4 h-auto py-2 text-[13px]">Сделка выиграна: клиент, объект и подписка созданы, установка и задачи онбординга запланированы.</p>}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="MRR клиента" value={kzt(mrr)} hint={`${live.length} активн. подписок`} />
-        <Stat label="Объекты" value={objs.length} />
-        <Stat label="Средняя оценка визитов" value={rating} hint={`${done.length} оценок`} />
-        <Stat label="Выручка по договорам" value={kzt(ltv)} hint="LTV на сегодня" />
+      <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="MRR клиента" icon="coin" color="green" value={kzt(mrr)} hint={`${live.length} активн. подписок`} />
+        <Stat label="Объекты" icon="pin" color="blue" value={objs.length} />
+        <Stat label="Средняя оценка визитов" icon="star" color="amber" value={rating} hint={`${done.length} оценок`} />
+        <Stat label="Выручка по договорам" icon="trend" color="violet" value={kzt(ltv)} hint="LTV на сегодня" />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">

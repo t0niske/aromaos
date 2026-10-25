@@ -224,18 +224,6 @@ export const tasks = pgTable('tasks', {
   createdAt: created(),
 }, t => [index('tasks_assignee_idx').on(t.assigneeId, t.status)]);
 
-/* Приём заявок с сайтов: у каждого сайта свой ключ (сам ключ не храним, только хеш) */
-export const apiKeys = pgTable('api_keys', {
-  id: serial('id').primaryKey(),
-  site: text('site').notNull(),
-  label: text('label').notNull(),
-  keyHash: text('key_hash').notNull(),
-  allowedOrigins: jsonb('allowed_origins').$type<string[]>().default([]).notNull(),
-  active: boolean('active').default(true).notNull(),
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
-  createdAt: created(),
-});
-
 /* Журнал действий: кто, что, когда */
 export const auditLog = pgTable('audit_log', {
   id: serial('id').primaryKey(),

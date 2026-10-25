@@ -5,6 +5,7 @@ import { desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
 import { kzt } from '@/lib/format';
+import { today } from '@/lib/dates';
 import { Badge, Empty, PageHeader, Skeleton } from '@/components/ui';
 import { Icon } from '@/components/icons';
 
@@ -21,7 +22,7 @@ async function Clients({ searchParams }: { searchParams: PageProps<'/clients'>['
   const rows = await db.select({
     c: t.companies, owner: t.users.name,
     objects: sql<number>`(select count(*) from objects o where o.company_id = "companies"."id")`.mapWith(Number),
-    mrr: sql<number>`(select coalesce(sum(s.price_month),0) from subscriptions s join objects o on o.id = s.object_id where o.company_id = "companies"."id" and s.status in ('active','renewing'))`.mapWith(Number),
+    mrr: sql<number>`(select coalesce(sum(s.price_month),0) from subscriptions s join objects o on o.id = s.object_id where o.company_id = "companies"."id" and s.status in ('active','renewing') and s.start_date <= ${today()})`.mapWith(Number),
     renewing: sql<number>`(select count(*) from subscriptions s join objects o on o.id = s.object_id where o.company_id = "companies"."id" and s.status = 'renewing')`.mapWith(Number),
   }).from(t.companies).leftJoin(t.users, eq(t.users.id, t.companies.ownerId))
     .where(q ? or(ilike(t.companies.name, `%${q}%`), ilike(t.companies.bin, `%${q}%`)) : undefined).orderBy(desc(t.companies.createdAt));

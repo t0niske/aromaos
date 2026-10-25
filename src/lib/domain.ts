@@ -188,7 +188,9 @@ export async function renewalSweep(db: DB) {
   const due = await db.select({ sub: s.subscriptions, obj: s.objects, owner: s.companies.ownerId })
     .from(s.subscriptions).innerJoin(s.objects, eq(s.objects.id, s.subscriptions.objectId))
     .innerJoin(s.companies, eq(s.companies.id, s.objects.companyId))
-    .where(and(eq(s.subscriptions.status, 'active'), sql`${s.subscriptions.endDate} <= ${horizon}`));
+    .where(and(eq(s.subscriptions.status, 'active'), sql`${s.subscriptions.endDate} <= ${horizon}`,
+      // уже продлённые (есть следующая подписка на объект) не трогаем
+      sql`not exists (select 1 from subscriptions n where n.object_id = ${s.subscriptions.objectId} and n.id <> ${s.subscriptions.id} and n.start_date >= ${s.subscriptions.endDate})`));
   for (const { sub, obj, owner } of due) {
     await db.update(s.subscriptions).set({ status: 'renewing' }).where(eq(s.subscriptions.id, sub.id));
     await db.insert(s.tasks).values({

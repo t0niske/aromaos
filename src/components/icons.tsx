@@ -22,6 +22,14 @@ const P: Record<string, string> = {
   drop: 'M10 3.5S5 9 5 12a5 5 0 0 0 10 0c0-3-5-8.5-5-8.5z',
   star: 'M10 3l2.1 4.3 4.7.7-3.4 3.3.8 4.7L10 13.8 5.8 16l.8-4.7L3.2 8l4.7-.7z',
   qr: 'M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h2v2h-2zM14.5 14.5h2v2h-2z',
+  bell: 'M5.5 13.5V9a4.5 4.5 0 0 1 9 0v4.5l1.5 2h-12zM8.5 17.5a1.6 1.6 0 0 0 3 0',
+  users: 'M7.5 9.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.5 16.5a5 5 0 0 1 10 0M13 3.8a3 3 0 0 1 0 5.4M15 12a5 5 0 0 1 2.5 4.5',
+  coin: 'M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM7.5 7h5M7.5 9.3h5M10 9.3V14',
+  up: 'M10 15.5v-11M5.5 9 10 4.5 14.5 9',
+  down: 'M10 4.5v11M5.5 11l4.5 4.5 4.5-4.5',
+  trend: 'M2.5 14.5 7.5 9.5l3 3 7-7M13 5.5h4.5V10',
+  clock: 'M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM10 6.5V10l2.5 1.5',
+  user: 'M10 9.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3.5 17.5a6.5 6.5 0 0 1 13 0',
 };
 
 export function Icon({ name, size = 18, className }: { name: keyof typeof P | string; size?: number; className?: string }) {

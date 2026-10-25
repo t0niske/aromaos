@@ -33,8 +33,9 @@ async function ObjectView({ params }: Pick<PageProps<'/objects/[id]'>, 'params'>
     db.select().from(t.tariffs).where(eq(t.tariffs.active, true)).orderBy(asc(t.tariffs.modelId), asc(t.tariffs.periodMonths)),
     db.select({ id: t.users.id, name: t.users.name }).from(t.users).where(and(eq(t.users.active, true), inArray(t.users.role, ['tech', 'service_head']))),
   ]);
-  const current = subs.find(x => x.s.status !== 'cancelled');
   const t0 = today();
+  // текущая — та, что действует сейчас; продление, которое ещё не началось, — следующая
+  const current = subs.find(x => x.s.status !== 'cancelled' && x.s.startDate <= t0) ?? subs.find(x => x.s.status !== 'cancelled');
   const upcoming = visits.filter(x => x.v.status === 'planned').reverse();
   const past = visits.filter(x => x.v.status !== 'planned');
   const scentName = (sid: number | null) => scents.find(s => s.id === sid)?.name;

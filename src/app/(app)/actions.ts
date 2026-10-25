@@ -1,13 +1,12 @@
 'use server';
 /* Серверные действия разделов: клиенты, объекты, подписки, визиты, оборудование, задачи, настройки */
-import { randomBytes, createHash } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { refresh } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
-import { addDays, addMonths } from '@/lib/dates';
+import { addDays, addMonths, today } from '@/lib/dates';
 import { audit, completeVisit, createSubscription, renewalSweep } from '@/lib/domain';
 import { hashPassword } from '@/lib/password';
 
@@ -107,6 +106,8 @@ export async function setSubscriptionStatus(id: number, status: 'active' | 'paus
   if (status === 'active' && sub.status === 'paused') { patch.pausedUntil = null; patch.endDate = addMonths(sub.endDate, 1); }
   if (status === 'cancelled') {
     patch.cancelReason = reason || 'не указана';
+    // дата окончания = дата расторжения: по ней считается отток на дашборде
+    if (sub.endDate > today()) patch.endDate = today();
     // будущие визиты отменяем, аппарат — забрать
     await db.update(t.visits).set({ status: 'cancelled' }).where(and(eq(t.visits.subscriptionId, id), eq(t.visits.status, 'planned')));
     await db.insert(t.visits).values({ objectId: sub.objectId, subscriptionId: id, type: 'uninstall', plannedDate: addDays(new Date().toISOString().slice(0, 10), 3) });
@@ -237,18 +238,6 @@ export async function updateTariff(id: number, form: FormData) {
   await db.update(t.tariffs).set(p).where(eq(t.tariffs.id, id));
   await audit(db, user.id, 'update', 'tariff', id, p);
   refresh();
-}
-
-/* Новый ключ для сайта: показывается один раз, в базе — только хеш */
-export async function rotateApiKey(id: number): Promise<string | null> {
-  const user = await requireUser('settings');
-  const db = await getDb();
-  const [k] = await db.select().from(t.apiKeys).where(eq(t.apiKeys.id, id));
-  if (!k) return null;
-  const key = `aos_${k.site}_${randomBytes(12).toString('hex')}`;
-  await db.update(t.apiKeys).set({ keyHash: createHash('sha256').update(key).digest('hex'), active: true }).where(eq(t.apiKeys.id, id));
-  await audit(db, user.id, 'rotate', 'api_key', id);
-  return key;
 }
 
 export async function runRenewals(): Promise<number> {

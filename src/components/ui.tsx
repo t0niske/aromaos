@@ -34,13 +34,16 @@ export function Card({ title, action, children, className = '', pad = true }: { 
   );
 }
 
-export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'up' | 'down' | 'warn' }) {
+export function Stat({ label, value, hint, tone, icon, color = 'violet' }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'up' | 'down' | 'warn'; icon?: string; color?: Tone }) {
   const c = tone === 'up' ? 'text-[var(--t-green)]' : tone === 'down' || tone === 'warn' ? 'text-[var(--t-red)]' : 'text-ink-3';
   return (
-    <div className="card p-4">
-      <div className="kicker">{label}</div>
-      <div className="num mt-1.5 text-[24px] leading-none font-semibold tracking-[-0.02em]">{value}</div>
-      {hint && <div className={`mt-2 text-[12.5px] ${c}`}>{hint}</div>}
+    <div className="card flex items-start justify-between gap-3 p-5">
+      <div className="min-w-0">
+        <div className="text-ink">{label}</div>
+        <div className="num mt-1.5 text-[22px] leading-tight font-semibold tracking-[-0.01em] text-ink">{value}</div>
+        {hint && <div className={`mt-1.5 text-[13px] ${c}`}>{hint}</div>}
+      </div>
+      {icon && <span className={`ichip ichip-sq ichip-${color}`}><Icon name={icon} size={22} /></span>}
     </div>
   );
 }
@@ -74,13 +77,17 @@ export function Field({ label, children, className = '' }: { label: string; chil
 
 export function Tabs({ items, active }: { items: { href: string; label: string; count?: number }[]; active: string }) {
   return (
-    <nav className="mb-4 flex gap-1 overflow-x-auto border-b border-line" aria-label="Фильтр" data-scroll-x>
-      {items.map(i => (
-        <Link key={i.href} href={i.href} aria-current={i.href === active ? 'page' : undefined}
-          className={`-mb-px border-b-2 px-3 py-2 whitespace-nowrap ${i.href === active ? 'border-accent font-medium text-ink' : 'border-transparent text-ink-3 hover:text-ink'}`}>
-          {i.label}{i.count != null && <span className="num ml-1.5 text-ink-3">{i.count}</span>}
-        </Link>
-      ))}
+    <nav className="mb-5 flex gap-1 overflow-x-auto border-b border-line" aria-label="Фильтр" data-scroll-x>
+      {items.map(i => {
+        const on = i.href === active;
+        return (
+          <Link key={i.href} href={i.href} aria-current={on ? 'page' : undefined}
+            className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 whitespace-nowrap transition-colors ${on ? 'border-accent font-medium text-accent' : 'border-transparent text-ink-2 hover:text-ink'}`}>
+            {i.label}
+            {i.count != null && <span className={`num grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11.5px] font-medium ${on ? 'bg-accent text-white' : 'bg-[var(--t-gray-bg)] text-ink-3'}`}>{i.count}</span>}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

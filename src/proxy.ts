@@ -13,6 +13,6 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // всё, кроме входа, публичного API приёма заявок и статики
-  matcher: ['/((?!login|api/public|_next/static|_next/image|favicon.ico).*)'],
+  // всё, кроме входа и статики (public/img — картинки интерфейса)
+  matcher: ['/((?!login|img/|_next/static|_next/image|favicon.ico).*)'],
 };

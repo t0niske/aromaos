@@ -1,24 +1,6 @@
 'use client';
 import { useState, useTransition } from 'react';
-import { rotateApiKey, runRenewals } from '../actions';
-
-/* Новый ключ сайта: показываем один раз — его нужно сразу вставить в настройки сайта */
-export function KeyRotate({ id }: { id: number }) {
-  const [key, setKey] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-  if (key) return (
-    <span className="flex w-full flex-wrap items-center gap-2">
-      <code className="num min-w-0 flex-1 truncate rounded bg-surface px-2 py-1 text-[12.5px]">{key}</code>
-      <button className="btn btn-sm" onClick={() => navigator.clipboard?.writeText(key)}>Копировать</button>
-      <span className="w-full text-[12px] text-ink-3">Ключ показан один раз. Старый больше не работает.</span>
-    </span>
-  );
-  return (
-    <button className="btn btn-sm" disabled={pending} onClick={() => {
-      if (window.confirm('Выпустить новый ключ? Старый перестанет работать.')) start(async () => setKey(await rotateApiKey(id)));
-    }}>Новый ключ</button>
-  );
-}
+import { runRenewals } from '../actions';
 
 export function RenewalsButton() {
   const [msg, setMsg] = useState('');

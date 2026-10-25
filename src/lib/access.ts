@@ -22,14 +22,16 @@ const ACCESS: Record<Role, Section[]> = {
 export const can = (role: Role, section: Section) => ACCESS[role]?.includes(section) ?? false;
 export const homeFor = (role: Role) => (can(role, 'dashboard') ? '/' : '/' + ACCESS[role][0]);
 
-export const NAV: { section: Section; href: string; label: string; icon: string }[] = [
+/* Меню: разделы сгруппированы, пустые для роли группы скрываются */
+export const NAV_GROUPS = ['Продажи', 'Сервис', 'Управление'] as const;
+export const NAV: { section: Section; href: string; label: string; icon: string; group?: (typeof NAV_GROUPS)[number] }[] = [
   { section: 'dashboard', href: '/', label: 'Дашборд', icon: 'grid' },
-  { section: 'leads', href: '/leads', label: 'Лиды и продажи', icon: 'funnel' },
-  { section: 'clients', href: '/clients', label: 'Клиенты', icon: 'building' },
-  { section: 'objects', href: '/objects', label: 'Объекты', icon: 'pin' },
-  { section: 'subscriptions', href: '/subscriptions', label: 'Подписки', icon: 'repeat' },
-  { section: 'visits', href: '/visits', label: 'Визиты', icon: 'calendar' },
-  { section: 'devices', href: '/devices', label: 'Оборудование', icon: 'box' },
-  { section: 'tasks', href: '/tasks', label: 'Задачи', icon: 'check' },
-  { section: 'settings', href: '/settings', label: 'Настройки', icon: 'gear' },
+  { section: 'leads', href: '/leads', label: 'Лиды и продажи', icon: 'funnel', group: 'Продажи' },
+  { section: 'clients', href: '/clients', label: 'Клиенты', icon: 'building', group: 'Продажи' },
+  { section: 'subscriptions', href: '/subscriptions', label: 'Подписки', icon: 'repeat', group: 'Продажи' },
+  { section: 'objects', href: '/objects', label: 'Объекты', icon: 'pin', group: 'Сервис' },
+  { section: 'visits', href: '/visits', label: 'Визиты', icon: 'calendar', group: 'Сервис' },
+  { section: 'devices', href: '/devices', label: 'Оборудование', icon: 'box', group: 'Сервис' },
+  { section: 'tasks', href: '/tasks', label: 'Задачи', icon: 'check', group: 'Управление' },
+  { section: 'settings', href: '/settings', label: 'Настройки', icon: 'gear', group: 'Управление' },
 ];

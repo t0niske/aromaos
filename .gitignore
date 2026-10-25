@@ -43,3 +43,4 @@ next-env.d.ts
 # локальная база и ключи
 /data
 /.next-build-db
+!.env.example

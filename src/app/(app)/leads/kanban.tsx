@@ -28,22 +28,22 @@ export function Kanban({ stages, leads }: { stages: { id: string; name: string }
   }
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" data-scroll-x>
-      <div className="grid auto-cols-[264px] grid-flow-col gap-3">
+    <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6" data-scroll-x>
+      <div className="grid auto-cols-[272px] grid-flow-col gap-5">
         {stages.map(s => {
           const items = view.filter(l => l.stage === s.id);
           return (
             <section key={s.id} aria-label={s.name}
               onDragOver={e => { e.preventDefault(); setOver(s.id); }} onDragLeave={() => setOver(o => (o === s.id ? null : o))} onDrop={() => drop(s.id)}
-              className={`flex min-h-[220px] flex-col rounded-[14px] border p-2 transition-colors ${over === s.id ? 'border-accent bg-accent-soft' : 'border-line bg-surface-2'}`}>
-              <h2 className="flex items-center justify-between px-1.5 pt-1 pb-2 text-[13px] font-semibold">
-                {s.name}<span className="num rounded-full bg-surface px-2 text-[12px] font-medium text-ink-3">{items.length}</span>
+              className={`-m-1.5 flex min-h-[220px] flex-col rounded-[10px] border-2 border-dashed p-1.5 transition-colors ${over === s.id ? 'border-accent bg-accent-soft' : 'border-transparent'}`}>
+              <h2 className="flex items-center justify-between px-1 pt-0.5 pb-3 text-[16px] font-medium">
+                {s.name}<span className="num badge badge-violet">{items.length}</span>
               </h2>
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-4">
                 {items.map(l => (
                   <article key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragEnd={() => { setDrag(null); setOver(null); }}
-                    className={`card cursor-grab p-3 active:cursor-grabbing ${drag === l.id ? 'opacity-50' : ''}`}>
-                    <Link href={`/leads/${l.id}`} className="block font-medium leading-snug hover:text-accent">{l.title}</Link>
+                    className={`card cursor-grab p-4 active:cursor-grabbing ${drag === l.id ? 'opacity-50' : ''}`}>
+                    <Link href={`/leads/${l.id}`} className="block font-medium leading-snug text-ink hover:text-accent">{l.title}</Link>
                     {l.title !== l.person && <div className="truncate text-[12.5px] text-ink-3">{l.person}</div>}
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
                       <span className={`badge site-${l.site}`}>{l.siteName}</span>

@@ -16,17 +16,6 @@ CREATE TABLE "activities" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "api_keys" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"site" text NOT NULL,
-	"label" text NOT NULL,
-	"key_hash" text NOT NULL,
-	"allowed_origins" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"active" boolean DEFAULT true NOT NULL,
-	"last_used_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "audit_log" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer,

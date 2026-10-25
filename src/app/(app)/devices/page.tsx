@@ -38,15 +38,14 @@ async function Devices({ searchParams }: { searchParams: PageProps<'/devices'>['
         { href: '/devices', label: 'Все', count: total },
         ...Object.entries(DEVICE_STATUS).map(([k, [label]]) => ({ href: `/devices?status=${k}`, label, count: counts.find(c => c.status === k)?.n ?? 0 })),
       ]} />
-      <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <Card pad={false}>
           {rows.length ? (
             <div className="tbl-wrap" data-scroll-x><table className="tbl">
-              <thead><tr><th>Серийный номер</th><th>Модель</th><th>Статус</th><th>Где</th><th>Гарантия</th><th>Цена</th></tr></thead>
+              <thead><tr><th>Аппарат</th><th>Статус</th><th>Где</th><th>Гарантия</th><th>Цена</th></tr></thead>
               <tbody>{rows.map(({ d, model, obj }) => (
                 <tr key={d.id}>
-                  <td><Link className="row-link num" href={`/devices/${d.id}`}>{d.serial}</Link></td>
-                  <td>{model}</td>
+                  <td className="whitespace-nowrap"><Link className="row-link num" href={`/devices/${d.id}`}>{d.serial}</Link><div className="text-[12.5px] text-ink-3">{model}</div></td>
                   <td><Badge tone={DEVICE_STATUS[d.status][1]}>{DEVICE_STATUS[d.status][0]}</Badge></td>
                   <td>{d.objectId ? <Link className="hover:text-accent" href={`/objects/${d.objectId}`}>{obj}</Link> : <span className="text-ink-3">склад</span>}</td>
                   <td className="num">{d.warrantyUntil ? (d.warrantyUntil < t0 ? <span className="text-ink-3">истекла</span> : `до ${dayYear(d.warrantyUntil)}`) : '—'}</td>

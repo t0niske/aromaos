@@ -6,20 +6,19 @@
      sales2@aromaos.local  / demo-sales-2026   — менеджер продаж
      service@aromaos.local / demo-service-2026 — руководитель сервиса
      tech@aromaos.local    / demo-tech-2026    — техник */
-import { randomBytes, createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { connectDb } from './client';
 import * as s from './schema';
 import catalog from './catalog.json';
 import { hashPassword } from '../lib/password';
 import { addDays, today } from '../lib/dates';
-import { completeVisit, intakeLead, moveLead, winLead } from '../lib/domain';
+import { audit, completeVisit, createSubscription, intakeLead, moveLead, renewalSweep, winLead } from '../lib/domain';
 
 async function main() {
   const { db, ready } = connectDb();
   await ready;
   // чистый лист
-  await db.execute(sql`truncate audit_log, api_keys, tasks, visits, device_events, devices, subscriptions, zones, objects, contacts, companies, activities, leads, tariffs, scents, device_models, users restart identity cascade`);
+  await db.execute(sql`truncate audit_log, tasks, visits, device_events, devices, subscriptions, zones, objects, contacts, companies, activities, leads, tariffs, scents, device_models, users restart identity cascade`);
 
   const [owner, sales1, sales2, serviceHead, tech] = await db.insert(s.users).values([
     { name: 'Айдана Сеитова', email: 'owner@aromaos.local', passwordHash: hashPassword('demo-owner-2026'), role: 'owner' },
@@ -64,17 +63,53 @@ async function main() {
     { lead: { name: 'Алибек Омаров', phone: '+77011234506', companyName: 'Бутик «Алтын Сәулет»', industry: 'бутик', areaM2: 150, sourceSite: 'aua' }, t: ['nova300', 1], start: -20, addr: 'Астана, ТРЦ Хан Шатыр' },
     { lead: { name: 'Сабина Ержанова', phone: '+77011234507', companyName: 'Стоматология «Дент Астана»', industry: 'клиника', areaM2: 200, sourceSite: 'vdokh', message: 'Запах больницы в коридоре' }, t: ['nova300', 3], start: -40, addr: 'Астана, ул. Туран, 55' },
     { lead: { name: 'Ержан Тулегенов', phone: '+77011234508', companyName: 'ЖК «Highvill»: лобби', industry: 'ЖК', areaM2: 400, sourceSite: 'tynys', channel: 'phone' }, t: ['nova1000', 6], start: -10, addr: 'Астана, ул. Ахмета Байтурсынова, 1' },
+    // история для графиков: два расторжения
+    { lead: { name: 'Илья Сорокин', phone: '+77011234509', companyName: 'Пекарня «Нан Үйі»', industry: 'пекарня', areaM2: 60, sourceSite: 'hosh' }, t: ['nova300', 3], start: -130, addr: 'Астана, ул. Бейбитшилик, 14', cancel: { at: -48, reason: 'закрыли точку' } },
+    { lead: { name: 'Азамат Нуров', phone: '+77011234510', companyName: 'Шоурум «Керамика»', industry: 'шоурум', areaM2: 220, sourceSite: 'tynys' }, t: ['nova300', 6], start: -95, addr: 'Астана, ул. Сарайшык, 5', cancel: { at: -8, reason: 'не подошёл аромат' } },
   ] as const;
 
   for (const w of won) {
     const lead = await L({ ...w.lead, utm: { utm_source: w.lead.sourceSite === 'aua' ? 'instagram' : 'google', utm_medium: 'cpc' } });
     await db.update(s.leads).set({ createdAt: new Date(Date.parse(addDays(t0, w.start - 12) + 'T09:00:00Z')) }).where(sql`id = ${lead.id}`);
     for (const st of ['qualify', 'survey', 'trial', 'proposal', 'contract'] as const) await moveLead(db, lead.id, st, lead.ownerId);
-    await winLead(db, lead.id, { tariffId: tariff(w.t[0], w.t[1]).id, address: w.addr, startDate: addDays(t0, w.start) }, lead.ownerId);
+    const res = await winLead(db, lead.id, { tariffId: tariff(w.t[0], w.t[1]).id, address: w.addr, startDate: addDays(t0, w.start) }, lead.ownerId);
+    if ('cancel' in w) {
+      // расторжение в прошлом: дата окончания = дата расторжения, дальше визитов нет, аппарат вернулся на склад
+      const end = addDays(t0, w.cancel.at);
+      await db.update(s.subscriptions).set({ status: 'cancelled', endDate: end, cancelReason: w.cancel.reason }).where(sql`id = ${res.subscriptionId}`);
+      await db.update(s.visits).set({ status: 'cancelled' }).where(sql`subscription_id = ${res.subscriptionId} and planned_date > ${end}`);
+      await db.insert(s.visits).values({ objectId: res.objectId, subscriptionId: res.subscriptionId, type: 'uninstall', plannedDate: end, employeeId: tech.id, status: 'done', doneAt: new Date(Date.parse(end + 'T12:00:00Z')) });
+      await db.update(s.devices).set({ status: 'stock', objectId: null, zoneId: null }).where(sql`object_id = ${res.objectId}`);
+      await db.update(s.tasks).set({ status: 'done' }).where(sql`object_id = ${res.objectId}`);
+    }
+    if (w.lead.companyName === 'Салон «Лотос»') {
+      // продлён заранее: следующая подписка начнётся в день окончания текущей
+      const [sub] = await db.select().from(s.subscriptions).where(sql`id = ${res.subscriptionId}`);
+      const next = await createSubscription(db, { objectId: res.objectId, tariffId: sub.tariffId, startDate: sub.endDate, withInstall: false, employeeId: tech.id });
+      await db.update(s.subscriptions).set({ autoRenew: false }).where(sql`id = ${sub.id}`);
+      await audit(db, sales1.id, 'renew', 'subscription', sub.id, { next: next.id });
+    }
+  }
+
+  // зоны с ароматами на действующих объектах (номера — из коллекции)
+  const ZONES: Record<string, [string, number][]> = {
+    'Кофейня «Бариста Лаб»': [['Вход', 21], ['Зал', 6]],
+    'Барбершоп «Кедр»': [['Зал', 4]],
+    'Отель «Сарыарка Резиденс»': [['Лобби', 17], ['Коридоры', 8], ['SPA', 2]],
+    'Фитнес «Атлант»': [['Раздевалки', 10], ['Тренажёрный зал', 18]],
+    'Салон «Лотос»': [['Ресепшен', 17], ['Зал', 9]],
+    'Бутик «Алтын Сәулет»': [['Торговый зал', 29]],
+    'Стоматология «Дент Астана»': [['Коридор', 1], ['Ресепшен', 17]],
+    'ЖК «Highvill»: лобби': [['Лобби', 26], ['Лифтовой холл', 17]],
+  };
+  const scentByN = new Map((await db.select().from(s.scents)).map(x => [x.n, x.id]));
+  for (const o of await db.select().from(s.objects)) {
+    const z = ZONES[o.name];
+    if (z) await db.insert(s.zones).values(z.map(([name, n]) => ({ objectId: o.id, name, scentId: scentByN.get(n) ?? null })));
   }
 
   // прошедшие визиты — выполнены (с оценками), один пропущен
-  const past = await db.select().from(s.visits).where(sql`planned_date < ${t0}`);
+  const past = await db.select().from(s.visits).where(sql`planned_date < ${t0} and status = 'planned'`).orderBy(s.visits.id);
   for (const [i, v] of past.entries()) {
     if (i === 3) { await db.update(s.visits).set({ status: 'missed' }).where(sql`id = ${v.id}`); continue; }
     await completeVisit(db, v.id, { oilMl: v.type === 'install' ? 200 : 150 + (i % 4) * 25, rating: i === 6 ? 3 : 5 - (i % 2), checklist: { refill: true, settings: true, photo: true } }, tech.id);
@@ -114,24 +149,15 @@ async function main() {
   await db.insert(s.tasks).values([
     { title: 'Заказать масла: Белый чай и Свежий цитрус (остаток < минимума)', assigneeId: serviceHead.id, dueDate: addDays(t0, 2), priority: 'normal', createdById: owner.id },
     { title: 'Подготовить план продаж на ноябрь', assigneeId: owner.id, dueDate: addDays(t0, 5), createdById: owner.id },
+    { title: 'Согласовать скидку 5% для шоурума «Mebel Lux»', assigneeId: owner.id, dueDate: t0, priority: 'high', createdById: sales1.id },
+    { title: 'Подписать акт сверки с отелем «Сарыарка Резиденс»', assigneeId: owner.id, dueDate: addDays(t0, -1), createdById: owner.id },
     { title: 'Позвонить клиентам с подпиской до конца месяца', assigneeId: sales2.id, dueDate: addDays(t0, 1), priority: 'high', createdById: owner.id },
   ]);
 
-  // ключи приёма заявок для сайтов (сами сайты пока не подключены)
-  const keys: Record<string, string> = {};
-  for (const [site, label, origin] of [['tynys', 'Tynys', 'https://t0niske.github.io'], ['aua', 'ÁUA', 'https://t0niske.github.io'], ['vdokh', 'ВДОХ', 'https://t0niske.github.io'], ['hosh', 'HOSH', 'https://t0niske.github.io']]) {
-    const key = `aos_${site}_${randomBytes(12).toString('hex')}`;
-    keys[site] = key;
-    await db.insert(s.apiKeys).values({ site, label, keyHash: createHash('sha256').update(key).digest('hex'), allowedOrigins: [origin, 'http://localhost:4173'] });
-  }
-  void sales1;
+  // ежедневная проверка продлений — в демо сразу, чтобы дашборд и вкладка «На продлении» совпадали
+  await renewalSweep(db);
   const n = (t: string) => db.execute(sql.raw(`select count(*)::int as c from ${t}`)).then(r => (r.rows[0] as { c: number }).c);
   console.log('Готово:', { лиды: await n('leads'), клиенты: await n('companies'), объекты: await n('objects'), подписки: await n('subscriptions'), визиты: await n('visits'), аппараты: await n('devices'), задачи: await n('tasks') });
-  // ключи сохраняем в data/ (не в git): понадобятся при подключении сайтов
-  const fs = await import('node:fs');
-  fs.mkdirSync('data', { recursive: true });
-  fs.writeFileSync('data/site-keys.local.json', JSON.stringify(keys, null, 2));
-  console.log('Ключи API для сайтов записаны в data/site-keys.local.json');
 }
 
 main().then(() => process.exit(0), e => { console.error(e); process.exit(1); });
