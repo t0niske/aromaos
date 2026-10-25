@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* AromaOS — токены. Светлая тема по умолчанию, тёмная — по настройке системы. */
+:root {
+  --bg: #f4f5f3;
+  --surface: #ffffff;
+  --surface-2: #f8f9f7;
+  --ink: #141816;
+  --ink-2: #4a524d;
+  --ink-3: #868d88;
+  --line: #e3e6e2;
+  --line-2: #d3d8d3;
+  --accent: #1d5c49;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2efe9;
+  --focus: #2f8f6f;
+  --t-gray-bg: #eef0ee; --t-gray: #545c57;
+  --t-green-bg: #e1f2e8; --t-green: #1c6b45;
+  --t-blue-bg: #e3edfb; --t-blue: #2457a6;
+  --t-amber-bg: #fbf0d9; --t-amber: #8a5a07;
+  --t-red-bg: #fbe4e1; --t-red: #a8352a;
+  --t-violet-bg: #ece6fb; --t-violet: #5b3fb0;
+  --shadow: 0 1px 2px rgba(20, 24, 22, .05), 0 4px 16px -8px rgba(20, 24, 22, .08);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101312;
+    --surface: #171b19;
+    --surface-2: #1c211f;
+    --ink: #eef1ef;
+    --ink-2: #b4bcb7;
+    --ink-3: #7d8681;
+    --line: #262c29;
+    --line-2: #323a36;
+    --accent: #5cc39b;
+    --accent-ink: #0c1a14;
+    --accent-soft: #1b3229;
+    --focus: #5cc39b;
+    --t-gray-bg: #232927; --t-gray: #b4bcb7;
+    --t-green-bg: #173326; --t-green: #6fd3a0;
+    --t-blue-bg: #18263d; --t-blue: #8db6f2;
+    --t-amber-bg: #33270f; --t-amber: #f0c26b;
+    --t-red-bg: #3a1c19; --t-red: #f29b8f;
+    --t-violet-bg: #251e3d; --t-violet: #b9a6f5;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-golos), system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.num { font-variant-numeric: tabular-nums; }
+
+@layer components {
+  .card { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  .card-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .card-b { padding: 16px 18px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font-weight: 500; white-space: nowrap; cursor: pointer;
+    transition: background .15s, border-color .15s; }
+  .btn:hover { background: var(--surface-2); border-color: var(--ink-3); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: var(--accent); filter: brightness(1.08); border-color: var(--accent); }
+  .btn-sm { height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+  .btn-ghost { border-color: transparent; background: transparent; }
+  .btn[disabled] { opacity: .5; cursor: default; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap;
+    background: var(--t-gray-bg); color: var(--t-gray); }
+  .badge-green { background: var(--t-green-bg); color: var(--t-green); }
+  .badge-blue { background: var(--t-blue-bg); color: var(--t-blue); }
+  .badge-amber { background: var(--t-amber-bg); color: var(--t-amber); }
+  .badge-red { background: var(--t-red-bg); color: var(--t-red); }
+  .badge-violet { background: var(--t-violet-bg); color: var(--t-violet); }
+
+  /* метки сайтов-источников — в цветах самих сайтов */
+  .site-tynys { background: #dff1ea; color: #145c45; }
+  .site-aua { background: #e2eaf6; color: #2b4a78; }
+  .site-vdokh { background: #eef8c9; color: #4b5d0b; }
+  .site-hosh { background: #e2e5fb; color: #2230c9; }
+  .site-manual { background: var(--t-gray-bg); color: var(--t-gray); }
+
+  .tbl { width: 100%; border-collapse: collapse; }
+  .tbl th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ink-3); padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .tbl td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl tbody tr:hover td { background: var(--surface-2); }
+  .tbl a.row-link { font-weight: 500; }
+  .tbl a.row-link:hover { color: var(--accent); }
+  .tbl-wrap { overflow-x: auto; }
+
+  .label { display: block; font-size: 12px; font-weight: 500; color: var(--ink-2); margin-bottom: 5px; }
+  .input { width: 100%; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); }
+  textarea.input { height: auto; min-height: 80px; padding: 9px 12px; resize: vertical; }
+  .input:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent); }
+
+  .muted { color: var(--ink-3); }
+  .kicker { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+  .link { color: var(--accent); font-weight: 500; }
+  .link:hover { text-decoration: underline; }
+  .dl { display: grid; grid-template-columns: 140px 1fr; gap: 8px 14px; }
+  .dl dt { color: var(--ink-3); }
+  @media (max-width: 640px) { .dl { grid-template-columns: 1fr; gap: 2px; } .dl dd { margin-bottom: 8px; } }
+}
