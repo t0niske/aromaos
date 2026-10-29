@@ -19,9 +19,10 @@ export default function TelegramPage() {
 async function TelegramSettings() {
   const me = await requireUser();
   const db = await getDb();
-  const [[u], bot] = await Promise.all([
+  const [[u], bot, group] = await Promise.all([
     db.select({ chat: t.users.telegramChatId }).from(t.users).where(eq(t.users.id, me.id)),
     getSetting('tg_username'),
+    getSetting('tg_group'),
   ]);
   const owner = can(me.role, 'settings');
   return (
@@ -41,7 +42,8 @@ async function TelegramSettings() {
             </div>
           )}
           <ul className="mt-5 grid gap-1.5 border-t border-line pt-4 text-[13.5px] text-ink-2">
-            <li>• Новые заявки с сайта приходят сразу — с кнопками «Беру в работу», «Тест 3 дня», «Отказ»</li>
+            <li>• В общей группе — заявки, замеры и установки с кнопками «Беру», сводка в 9:00</li>
+            <li>• В личке — назначенные вам заявки, ваши задачи и выезды, утром — план на день</li>
             {COMMANDS.map(([c, d]) => <li key={c}>• /{c} — {d.toLowerCase()}</li>)}
           </ul>
         </Card>
@@ -52,6 +54,10 @@ async function TelegramSettings() {
             <ActionForm action={saveBotToken} submit={bot ? 'Заменить токен' : 'Подключить бота'}>
               <Field label="Токен бота"><input className="input" name="token" type="password" autoComplete="off" placeholder="123456789:AA…" required /></Field>
             </ActionForm>
+            {bot && <div className="mt-5 border-t border-line pt-4">
+              <p className="font-medium text-ink">Общая группа {group ? <Badge tone="green">подключена</Badge> : <Badge>не подключена</Badge>}</p>
+              <p className="mt-1 text-[13.5px] text-ink-2">Создайте группу команды в Telegram, добавьте в неё @{bot} и отправьте там команду <b>/group</b> (со своего подключённого Telegram). Без группы общие сообщения приходят каждому в личку.</p>
+            </div>}
             <p className="mt-4 text-[12.5px] text-ink-3">Токен хранится только на сервере системы. Если он где-то засветился — в @BotFather: /revoke, затем вставьте новый.</p>
           </Card>
         )}

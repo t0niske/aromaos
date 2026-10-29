@@ -9,7 +9,7 @@ export const ROLE_NAMES: Record<Role, string> = {
 
 const ACCESS: Record<Role, Section[]> = {
   owner: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'devices', 'tasks', 'settings'],
-  sales_head: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'tasks'],
+  sales_head: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'tasks'],
   sales: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'tasks'],
   account: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'tasks'],
   service_head: ['dashboard', 'clients', 'objects', 'visits', 'devices', 'tasks'],

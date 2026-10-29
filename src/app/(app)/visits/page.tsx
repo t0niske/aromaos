@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { and, asc, desc, eq, gte, lt, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
 import { addDays, today } from '@/lib/dates';
@@ -21,7 +21,8 @@ async function Visits({ searchParams }: { searchParams: PageProps<'/visits'>['se
   const tab = String((await searchParams).tab ?? 'week');
   const db = await getDb();
   const t0 = today();
-  const mine = user.role === 'tech' ? [eq(t.visits.employeeId, user.id)] : [];
+  // техник видит свои визиты и свободные (без исполнителя) — их можно взять кнопкой «Беру» в Telegram
+  const mine = user.role === 'tech' ? [or(eq(t.visits.employeeId, user.id), isNull(t.visits.employeeId))!] : [];
   const planned = eq(t.visits.status, 'planned');
   const filters: Record<string, SQL[]> = {
     today: [planned, eq(t.visits.plannedDate, t0)],

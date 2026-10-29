@@ -6,6 +6,10 @@ import { z } from 'zod';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
 import { audit, intakeLead, moveLead, winLead } from '@/lib/domain';
+import { notifyAssigned, notifyWon, startSurvey } from '@/lib/telegram';
+
+// Telegram — дополнение: его сбой не должен ломать действие в CRM
+const quiet = (p: Promise<unknown>) => p.catch(e => console.error('telegram', e));
 
 const stage = z.enum(t.leadStageEnum.enumValues);
 const optInt = z.preprocess(v => (v === '' || v == null ? null : Number(v)), z.number().int().nonnegative().nullable());
@@ -29,7 +33,9 @@ export async function moveLeadAction(id: number, to: string, reason?: string) {
   const user = await requireUser('leads');
   const st = stage.parse(to);
   if (st === 'won') return; // выигрыш — только через форму с тарифом в карточке лида
-  await moveLead(await getDb(), id, st, user.id, reason);
+  const db = await getDb();
+  await moveLead(db, id, st, user.id, reason);
+  if (st === 'survey') await quiet(startSurvey(db, id, user.id)); // замер → выезд для сервисной команды с кнопкой «Беру»
   refresh();
 }
 
@@ -40,8 +46,10 @@ export async function updateLead(id: number, form: FormData) {
     areaM2: optInt, expectedMrr: optInt, ownerId: optInt,
   }).parse(Object.fromEntries(form));
   const db = await getDb();
+  const [before] = await db.select({ ownerId: t.leads.ownerId }).from(t.leads).where(eq(t.leads.id, id));
   await db.update(t.leads).set({ ...p, updatedAt: new Date() }).where(eq(t.leads.id, id));
   await audit(db, user.id, 'update', 'lead', id);
+  if (p.ownerId && p.ownerId !== before?.ownerId && p.ownerId !== user.id) await quiet(notifyAssigned(id, p.ownerId));
   refresh();
 }
 
@@ -62,5 +70,6 @@ export async function winLeadAction(id: number, _: FormState, form: FormData): P
   }).safeParse(Object.fromEntries(form));
   if (!p.success) return { error: p.error.issues[0].message };
   const r = await winLead(await getDb(), id, { ...p.data, objectName: p.data.objectName ?? undefined, address: p.data.address ?? undefined }, user.id);
+  await quiet(notifyWon(r.objectId));
   redirect(`/clients/${r.companyId}?won=1`);
 }
