@@ -26,6 +26,8 @@ export const users = pgTable('users', {
   role: roleEnum('role').notNull(),
   phone: text('phone'),
   active: boolean('active').default(true).notNull(),
+  telegramChatId: text('telegram_chat_id'),        // куда бот пишет этому сотруднику
+  telegramLinkCode: text('telegram_link_code'),    // одноразовый код привязки: t.me/<бот>?start=<код>
   createdAt: created(),
 }, t => [uniqueIndex('users_email_uq').on(t.email)]);
 
@@ -234,3 +236,10 @@ export const auditLog = pgTable('audit_log', {
   data: jsonb('data').$type<Record<string, unknown>>().default({}).notNull(),
   createdAt: created(),
 }, t => [index('audit_entity_idx').on(t.entity, t.entityId)]);
+
+/* Настройки системы «ключ → значение»: токен Telegram-бота и т. п. Вводит собственник в «Настройках» */
+export const settings = pgTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});

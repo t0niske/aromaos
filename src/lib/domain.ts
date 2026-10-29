@@ -28,7 +28,7 @@ export async function pickSalesOwner(db: DB): Promise<number | null> {
     id: s.users.id,
     open: sql<number>`(select count(*) from leads l where l.owner_id = "users"."id" and l.stage not in ('won','lost'))`.mapWith(Number),
     recent: sql<number>`(select count(*) from leads l where l.owner_id = "users"."id" and l.created_at > now() - interval '30 days')`.mapWith(Number),
-  }).from(s.users).where(and(eq(s.users.role, 'sales'), eq(s.users.active, true))).orderBy(asc(s.users.id));
+  }).from(s.users).where(and(inArray(s.users.role, ['sales', 'sales_head']), eq(s.users.active, true))).orderBy(asc(s.users.id));
   if (!rows.length) return null;
   return rows.reduce((a, b) => (b.open < a.open || (b.open === a.open && b.recent < a.recent) ? b : a)).id;
 }

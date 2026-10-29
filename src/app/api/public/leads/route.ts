@@ -7,6 +7,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { intakeLead } from '@/lib/domain';
+import { notifyNewLead } from '@/lib/telegram';
 
 const Body = z.object({
   name: z.string().trim().max(120).optional(),
@@ -54,5 +55,6 @@ export async function POST(req: NextRequest) {
   const { lead, duplicate } = await intakeLead(db, {
     name: p.data.name || 'Без имени', phone: p.data.phone, industry: p.data.space, message, channel: 'form', sourceSite: site,
   });
+  await notifyNewLead(lead.id, duplicate).catch(e => console.error('telegram notify', e)); // заявка уже сохранена — бот не должен её ронять
   return NextResponse.json({ ok: true, id: lead.id, duplicate }, { status: 201 });
 }

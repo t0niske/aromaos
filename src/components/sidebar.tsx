@@ -124,6 +124,7 @@ function UserMenu({ user, logout }: { user: ShellUser; logout: ReactNode }) {
           </div>
           <div className="my-1.5 border-t border-line" />
           <Link href="/tasks" className="menu-item" role="menuitem" onClick={() => setOpen(false)}><Icon name="check" /> Мои задачи</Link>
+          <Link href="/telegram" className="menu-item" role="menuitem" onClick={() => setOpen(false)}><Icon name="chat" /> Telegram</Link>
           <div className="my-1.5 border-t border-line" />
           <div className="px-3 pt-1">{logout}</div>
         </div>

@@ -11,7 +11,7 @@ export const day = (d: string | Date | null | undefined) => {
 export const dayYear = (d: string | null | undefined) => (d ? `${day(d)} ${d.slice(0, 4)}` : '—');
 
 export const SITE_NAMES: Record<string, string> = {
-  tynys: 'Tynys', aua: 'ÁUA', vdokh: 'ВДОХ', hosh: 'HOSH', manual: 'Вручную',
+  tynys: 'Tynys', aua: 'ÁUA', vdokh: 'Aromé', hosh: 'HOSH', manual: 'Вручную',
 };
 export const CHANNEL_NAMES: Record<string, string> = {
   form: 'Форма на сайте', whatsapp: 'WhatsApp', instagram: 'Instagram', '2gis': '2ГИС', phone: 'Звонок', referral: 'Рекомендация', email: 'Почта',
