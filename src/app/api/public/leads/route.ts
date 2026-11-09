@@ -1,12 +1,14 @@
 /* Приём заявок с сайтов: POST /api/public/leads
    Сайт шлёт форму на свой же адрес (/api/lead), nginx на сервере пересылает сюда и добавляет X-Site-Key —
    в коде сайтов адреса системы нет. Ключи — в .env на сервере: LEAD_KEYS=vdokh:<ключ>,tynys:<ключ>…
-   Тело JSON: { name?, phone, space?, page?, message?, website? } — website — ловушка для ботов, у людей пустая. */
+   Тело JSON: { name?, phone, space?, page?, message?, src?, website? } — website — ловушка для ботов, у людей пустая;
+   src — откуда пришёл человек ({ ref, landing, utm }), см. lib/lead-source. */
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { intakeLead } from '@/lib/domain';
+import { describeSource } from '@/lib/lead-source';
 import { notifyNewLead } from '@/lib/telegram';
 
 const Body = z.object({
@@ -15,6 +17,11 @@ const Body = z.object({
   space: z.string().trim().max(120).optional(),
   page: z.string().trim().max(200).optional(),
   message: z.string().trim().max(2000).optional(),
+  src: z.object({
+    ref: z.string().max(300).optional(),
+    landing: z.string().max(300).optional(),
+    utm: z.record(z.string(), z.string().max(200)).optional(),
+  }).optional().catch(undefined), // кривой src не должен ронять заявку
   website: z.string().max(500).optional(),
 });
 
@@ -53,7 +60,7 @@ export async function POST(req: NextRequest) {
   const message = [p.data.message, p.data.space && `Пространство: ${p.data.space}`, p.data.page && `Страница: ${p.data.page}`].filter(Boolean).join('\n');
   const db = await getDb();
   const { lead, duplicate } = await intakeLead(db, {
-    name: p.data.name || 'Без имени', phone: p.data.phone, industry: p.data.space, message, channel: 'form', sourceSite: site,
+    name: p.data.name || 'Без имени', phone: p.data.phone, industry: p.data.space, message, channel: 'form', sourceSite: site, utm: describeSource(p.data.src),
   });
   await notifyNewLead(lead.id, duplicate).catch(e => console.error('telegram notify', e)); // заявка уже сохранена — бот не должен её ронять
   return NextResponse.json({ ok: true, id: lead.id, duplicate }, { status: 201 });

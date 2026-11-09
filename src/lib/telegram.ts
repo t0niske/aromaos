@@ -106,6 +106,7 @@ function leadText(l: Lead, owner: string | null, title = 'Заявка') {
     `<b>${title} #${l.id}</b> · ${esc(SITE_NAMES[l.sourceSite] ?? l.sourceSite)} · ${esc(stageName(l.stage))}`,
     `${esc(l.name)}${l.phone ? ` · ${esc(l.phone)}` : ''}`,
     l.industry && `Пространство: ${esc(l.industry)}`,
+    l.utm?.['Источник'] && `Источник: ${esc(l.utm['Источник'])}${l.utm['Вход'] ? ` → ${esc(l.utm['Вход'])}` : ''}`,
     l.message && esc(l.message),
     `Ответственный: ${owner ? esc(owner) : '—'}`,
   ].filter(Boolean).join('\n');
