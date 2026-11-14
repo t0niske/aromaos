@@ -89,9 +89,10 @@ export const leads = pgTable('leads', {
   trialUntil: date('trial_until'),
   ownerId: integer('owner_id').references(() => users.id),
   companyId: integer('company_id'),
+  visitorId: text('visitor_id'),               // посетитель сайта (cookie ar_vid) — для «Пути клиента»
   createdAt: created(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, t => [index('leads_stage_idx').on(t.stage), index('leads_phone_idx').on(t.phone)]);
+}, t => [index('leads_stage_idx').on(t.stage), index('leads_phone_idx').on(t.phone), index('leads_visitor_idx').on(t.visitorId)]);
 
 export const activities = pgTable('activities', {
   id: serial('id').primaryKey(),
@@ -243,3 +244,66 @@ export const settings = pgTable('settings', {
   value: text('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/* Заходы на сайты (свой счётчик, без записи экрана; см. docs/web-visits.md).
+   Заход = визит посетителя (cookie ar_sid, 30 минут бездействия); посетитель — cookie ar_vid (12 месяцев).
+   Без заявки хранятся 90 дней, с заявкой — пока есть заявка. Название web_*, потому что visits — выезды техников. */
+export const webVisits = pgTable('web_visits', {
+  id: serial('id').primaryKey(),
+  site: text('site').notNull(),                         // vdokh | tynys | … — по ключу сайта
+  sid: text('sid').notNull(),
+  vid: text('vid').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  lastAt: timestamp('last_at', { withTimezone: true }).defaultNow().notNull(),
+  lastPingAt: timestamp('last_ping_at', { withTimezone: true }),
+  number: integer('number').default(1).notNull(),       // какой по счёту заход посетителя
+  source: text('source').default('Прямой заход').notNull(),
+  referrer: text('referrer'),
+  utm: jsonb('utm').$type<Record<string, string>>().default({}).notNull(),
+  landing: text('landing'),
+  pages: integer('pages').default(0).notNull(),
+  activeSeconds: integer('active_seconds').default(0).notNull(),
+  eventsCount: integer('events_count').default(0).notNull(),
+  hasTel: boolean('has_tel').default(false).notNull(),
+  hasWa: boolean('has_wa').default(false).notNull(),
+  hasForm: boolean('has_form').default(false).notNull(), // открывал или начинал заполнять форму
+  hasLeave: boolean('has_leave').default(false).notNull(),
+  ip: text('ip'),
+  userAgent: text('user_agent'),
+  device: text('device'),
+  browser: text('browser'),
+  os: text('os'),
+  screen: text('screen'),
+  lang: text('lang'),
+  tz: text('tz'),
+  touch: boolean('touch').default(false).notNull(),
+  webdriver: boolean('webdriver').default(false).notNull(),
+  ym: text('ym'),                                        // ClientID Яндекс Метрики — найти запись в Вебвизоре
+  kind: text('kind').default('human').notNull(),         // human | suspect | bot
+  reasons: text('reasons'),
+  checked: boolean('checked').default(false).notNull(),  // окончательно классифицирован после конца захода
+  leadId: integer('lead_id').references(() => leads.id, { onDelete: 'set null' }),
+}, t => [
+  uniqueIndex('web_visits_sid_uq').on(t.sid), index('web_visits_started_idx').on(t.startedAt),
+  index('web_visits_vid_idx').on(t.vid, t.startedAt), index('web_visits_lead_idx').on(t.leadId), index('web_visits_ping_idx').on(t.lastPingAt),
+]);
+
+export const webPages = pgTable('web_pages', {
+  id: serial('id').primaryKey(),
+  visitId: integer('visit_id').references(() => webVisits.id, { onDelete: 'cascade' }).notNull(),
+  pid: text('pid').notNull(),
+  path: text('path').notNull(),
+  title: text('title'),
+  openedAt: timestamp('opened_at', { withTimezone: true }).defaultNow().notNull(),
+  activeSeconds: integer('active_seconds').default(0).notNull(),
+  scroll: integer('scroll').default(0).notNull(),
+}, t => [index('web_pages_visit_idx').on(t.visitId, t.pid)]);
+
+export const webEvents = pgTable('web_events', {
+  id: serial('id').primaryKey(),
+  visitId: integer('visit_id').references(() => webVisits.id, { onDelete: 'cascade' }).notNull(),
+  pageId: integer('page_id').references(() => webPages.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  data: text('data'),
+  createdAt: created(),
+}, t => [index('web_events_visit_idx').on(t.visitId, t.id), index('web_events_name_idx').on(t.name, t.createdAt)]);

@@ -15,6 +15,13 @@
       "when": 1793257464756,
       "tag": "0001_telegram",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794661986215,
+      "tag": "0002_web_visits",
+      "breakpoints": true
     }
   ]
 }

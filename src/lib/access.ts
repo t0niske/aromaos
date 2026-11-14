@@ -1,6 +1,7 @@
-/* Роли и разделы (спецификация, раздел 3). Используется и на сервере, и в меню. */
+/* Роли и разделы (спецификация, раздел 3). Используется и на сервере, и в меню.
+   «Заходы на сайт» (traffic) — собственник, руководитель продаж и маркетолог: там IP посетителей. */
 export type Role = 'owner' | 'sales_head' | 'sales' | 'account' | 'service_head' | 'tech' | 'warehouse' | 'accountant' | 'marketer';
-export type Section = 'dashboard' | 'leads' | 'clients' | 'objects' | 'subscriptions' | 'visits' | 'devices' | 'tasks' | 'settings';
+export type Section = 'dashboard' | 'leads' | 'clients' | 'objects' | 'subscriptions' | 'visits' | 'devices' | 'tasks' | 'traffic' | 'settings';
 
 export const ROLE_NAMES: Record<Role, string> = {
   owner: 'Собственник', sales_head: 'Руководитель продаж', sales: 'Менеджер продаж', account: 'Аккаунт-менеджер',
@@ -8,15 +9,15 @@ export const ROLE_NAMES: Record<Role, string> = {
 };
 
 const ACCESS: Record<Role, Section[]> = {
-  owner: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'devices', 'tasks', 'settings'],
-  sales_head: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'tasks'],
+  owner: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'devices', 'tasks', 'traffic', 'settings'],
+  sales_head: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'tasks', 'traffic'],
   sales: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'tasks'],
   account: ['dashboard', 'leads', 'clients', 'objects', 'subscriptions', 'visits', 'tasks'],
   service_head: ['dashboard', 'clients', 'objects', 'visits', 'devices', 'tasks'],
   tech: ['visits', 'devices', 'tasks'],
   warehouse: ['devices', 'tasks'],
   accountant: ['dashboard', 'clients', 'subscriptions', 'tasks'],
-  marketer: ['dashboard', 'leads', 'tasks'],
+  marketer: ['dashboard', 'leads', 'tasks', 'traffic'],
 };
 
 export const can = (role: Role, section: Section) => ACCESS[role]?.includes(section) ?? false;
@@ -27,6 +28,7 @@ export const NAV_GROUPS = ['Продажи', 'Сервис', 'Управлени
 export const NAV: { section: Section; href: string; label: string; icon: string; group?: (typeof NAV_GROUPS)[number] }[] = [
   { section: 'dashboard', href: '/', label: 'Дашборд', icon: 'grid' },
   { section: 'leads', href: '/leads', label: 'Лиды и продажи', icon: 'funnel', group: 'Продажи' },
+  { section: 'traffic', href: '/traffic', label: 'Заходы на сайт', icon: 'trend', group: 'Продажи' },
   { section: 'clients', href: '/clients', label: 'Клиенты', icon: 'building', group: 'Продажи' },
   { section: 'subscriptions', href: '/subscriptions', label: 'Подписки', icon: 'repeat', group: 'Продажи' },
   { section: 'objects', href: '/objects', label: 'Объекты', icon: 'pin', group: 'Сервис' },

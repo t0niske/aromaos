@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Fragment, Suspense } from 'react';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import { getDb, t } from '@/db';
 import { requireUser } from '@/lib/auth';
 import { today } from '@/lib/dates';
+import { can } from '@/lib/access';
 import { STAGES } from '@/lib/domain';
+import { sourceGroup, SOURCE_GROUPS } from '@/lib/web-detect';
+import { dur, when } from '@/lib/web-format';
 import { CHANNEL_NAMES, PRIORITY, SITE_NAMES, day, dayYear, kzt } from '@/lib/format';
 import { ActionForm } from '@/components/action-form';
 import { Badge, Card, Empty, Field, PageHeader, Skeleton } from '@/components/ui';
@@ -19,7 +22,7 @@ export default function LeadPage({ params, searchParams }: PageProps<'/leads/[id
 const KIND: Record<string, string> = { note: 'Заметка', call: 'Звонок', whatsapp: 'WhatsApp', meeting: 'Встреча', stage: 'Этап', system: 'Система' };
 
 async function Lead({ params, searchParams }: Pick<PageProps<'/leads/[id]'>, 'params' | 'searchParams'>) {
-  await requireUser('leads');
+  const user = await requireUser('leads');
   const id = Number((await params).id);
   const sp = await searchParams;
   if (!Number.isInteger(id)) notFound();
@@ -27,12 +30,15 @@ async function Lead({ params, searchParams }: Pick<PageProps<'/leads/[id]'>, 'pa
   const [row] = await db.select({ l: t.leads, owner: t.users.name }).from(t.leads).leftJoin(t.users, eq(t.users.id, t.leads.ownerId)).where(eq(t.leads.id, id));
   if (!row) notFound();
   const { l } = row;
-  const [acts, tasks, sellers, tariffs] = await Promise.all([
+  const [acts, tasks, sellers, tariffs, path] = await Promise.all([
     db.select({ a: t.activities, user: t.users.name }).from(t.activities).leftJoin(t.users, eq(t.users.id, t.activities.userId)).where(eq(t.activities.leadId, id)).orderBy(desc(t.activities.createdAt)),
     db.select().from(t.tasks).where(eq(t.tasks.leadId, id)).orderBy(asc(t.tasks.status), asc(t.tasks.dueDate)),
     db.select({ id: t.users.id, name: t.users.name }).from(t.users).where(and(eq(t.users.active, true), inArray(t.users.role, ['sales', 'sales_head', 'owner', 'account']))),
     db.select({ id: t.tariffs.id, name: t.tariffs.name, total: t.tariffs.priceTotal, months: t.tariffs.periodMonths }).from(t.tariffs).where(eq(t.tariffs.active, true)).orderBy(asc(t.tariffs.modelId), asc(t.tariffs.periodMonths)),
+    // «Путь клиента»: все заходы на сайт этого посетителя (cookie ar_vid) и заходы, отмеченные этой заявкой
+    db.select().from(t.webVisits).where(l.visitorId ? or(eq(t.webVisits.vid, l.visitorId), eq(t.webVisits.leadId, id)) : eq(t.webVisits.leadId, id)).orderBy(asc(t.webVisits.startedAt)).limit(50),
   ]);
+  const seeTraffic = can(user.role, 'traffic');
   const open = l.stage !== 'won' && l.stage !== 'lost';
   const suggest = tariffs.find(x => x.months === 6 && (l.areaM2 ?? 0) > 300 === x.name.includes('1000'))?.id;
 
@@ -119,6 +125,26 @@ async function Lead({ params, searchParams }: Pick<PageProps<'/leads/[id]'>, 'pa
               {l.message && <><dt>Запрос</dt><dd>{l.message}</dd></>}
             </dl>
           </Card>
+
+          {path.length > 0 && (
+            <Card title={`Путь клиента · ${path.length}`} pad={false}>
+              <p className="px-4 pt-3 text-[13px] text-ink-2">
+                Первый заход {when(path[0].startedAt, false)} — {path[0].source}.
+                {' '}{(() => { const d = Math.floor((l.createdAt.getTime() - path[0].startedAt.getTime()) / 864e5); return d > 0 ? `До заявки ${d} дн.` : 'Заявка в день первого захода.'; })()}
+              </p>
+              <ul className="mt-2">{path.slice().reverse().map(v => {
+                const inner = <>
+                  <span className="mt-1 inline-block size-2 shrink-0 rounded-full" style={{ background: SOURCE_GROUPS[sourceGroup(v.source)].color }} />
+                  <span className="min-w-0 flex-1"><span className="num block">{when(v.startedAt, false)} · {v.source}</span>
+                    <span className="block text-[12.5px] text-ink-3">{v.pages} стр. · {dur(v.activeSeconds)}{v.hasTel ? ' · телефон' : ''}{v.hasWa ? ' · WhatsApp' : ''}</span></span>
+                  {v.leadId === l.id && <Badge tone="green">заявка</Badge>}
+                </>;
+                return <li key={v.id} className="border-t border-line text-[13px]">
+                  {seeTraffic ? <Link href={`/traffic/${v.id}`} className="flex items-start gap-2 px-4 py-2 hover:bg-surface-2">{inner}</Link> : <div className="flex items-start gap-2 px-4 py-2">{inner}</div>}
+                </li>;
+              })}</ul>
+            </Card>
+          )}
 
           <Card title="Задачи" action={<Link className="link text-[13px]" href={`/tasks/new?lead=${l.id}`}>Добавить</Link>} pad={false}>
             {tasks.length ? <ul>{tasks.map(x => (
